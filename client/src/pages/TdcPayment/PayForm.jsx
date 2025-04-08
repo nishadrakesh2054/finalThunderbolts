@@ -110,6 +110,12 @@ const PayForm = () => {
           <span>{fee}</span>
         </h2>
 
+        {/* Important Note */}
+        <p className="payment-note text-danger fw-bold mb-3">
+          ⚠️ Note: Please use <u>Mobile Banking Service only</u> to complete
+          your payment .
+        </p>
+
         {error && (
           <Alert variant="danger" className="error-message">
             {error}

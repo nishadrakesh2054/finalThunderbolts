@@ -34,6 +34,7 @@ const PayResponse = () => {
     const PID = params.get("PID");
     const PS = params.get("PS");
     const RC = params.get("RC");
+
     const DV = params.get("DV");
     const UID = params.get("UID");
     const BC = params.get("BC");
@@ -43,14 +44,39 @@ const PayResponse = () => {
 
 
 
-    if (RC !== '00') {
-        setResponseMessage(`Payment was not completed. (Code: ${RC})`);
+    // if (RC !== '00') {
+    //     setResponseMessage(`Payment was not completed. (Code: ${RC})`);
+    //     setIsSuccess(false);
+    //     setRedirectUrl("/register");
+    //     setShouldRedirect(true);
+    //     return;
+    //   }
+
+     // Immediate check for failure/cancellation (from documentation)
+     if (PS === "false" || RC !== "successful") {
+        let message = "Payment failed";
+        switch(RC) {
+          case "01":
+            message = "Payment was cancelled by user";
+            break;
+          case "02":
+            message = "Payment timed out";
+            break;
+          case "03":
+            message = "Invalid payment credentials";
+            break;
+          case "04":
+            message = "Insufficient funds";
+            break;
+          default:
+            message = `Payment failed (Code: ${RC})`;
+        }
+        
+        setResponseMessage(message);
         setIsSuccess(false);
-        setRedirectUrl("/register");
         setShouldRedirect(true);
         return;
       }
-
   
     const formData = sessionStorage.getItem("formData")
       ? JSON.parse(sessionStorage.getItem("formData"))
@@ -129,11 +155,20 @@ const PayResponse = () => {
 
   useEffect(() => {
     if (shouldRedirect) {
-      setTimeout(() => {
-        navigate(redirectUrl);
-      }, 2000); // Redirect after 5 seconds or customize the delay as needed
+      const timer = setTimeout(() => {
+        navigate(redirectUrl, {
+          state: { 
+            paymentError: responseMessage,
+            formData: sessionStorage.getItem("formData") 
+              ? JSON.parse(sessionStorage.getItem("formData"))
+              : null
+          }
+        });
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
-  }, [shouldRedirect, redirectUrl, navigate]);
+  }, [shouldRedirect, redirectUrl, responseMessage, navigate]);
 
   return (
     <div className="payment-reponse">

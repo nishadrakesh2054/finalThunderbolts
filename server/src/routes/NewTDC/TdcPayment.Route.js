@@ -215,137 +215,293 @@ router.post("/pre-check-registration", async (req, res) => {
   }
 });
 
+// router.post("/verify-payment", async (req, res) => {
+//   const { PRN, PID, PS, RC, UID, BC, INI, P_AMT, R_AMT, DV, formData } =
+//     req.body;
+
+//   // Check if all required parameters are present
+//   if (
+//     !PRN ||
+//     !PID ||
+//     !PS ||
+//     !RC ||
+//     !UID ||
+//     !BC ||
+//     !INI ||
+//     !P_AMT ||
+//     !R_AMT ||
+//     !DV ||
+//     !formData
+//   ) {
+//     return res.status(400).json({
+//       verified: false,
+//       message: "Missing required parameters from backend",
+//     });
+//   }
+
+// //   if (RC !== "00") {
+// //     return res.status(400).json({
+// //       verified: false,
+// //       redirectUrl: "/register",
+// //       message: `Payment was not successful. Response code: ${RC}`,
+// //         paymentStatus: "cancelled"
+// //     });
+// //   }
+
+//   // 3. Check if this PRN was already processed
+//   const existingPayment = await paymentTDC.findOne({
+//     where: { transactionId: PRN },
+//   });
+//   if (existingPayment) {
+//     return res.status(400).json({
+//       verified: false,
+//       message: "This payment has already been processed",
+//     });
+//   }
+
+//   const verificationString = `${PRN},${PID},${PS},${RC},${UID},${BC},${INI},${P_AMT},${R_AMT}`;
+
+//   // Debugging logs
+//   console.log("Received PRN from frontend:", PRN);
+//   const transaction = await sequelize.transaction();
+
+//   try {
+//     // Generate HMAC-SHA512 hash for verification
+//     const hmac = crypto.createHmac("sha512", process.env.SECRET_KEY);
+//     hmac.update(verificationString.trim(), "utf-8");
+//     const generatedHash = hmac.digest("hex").toUpperCase();
+
+//     // Compare the generated hash with the received DV
+//     if (generatedHash !== DV.toUpperCase()) {
+//       await transaction.rollback();
+//       return res.status(400).json({
+//         verified: false,
+//         message: "Invalid verification. Hashes do not match.",
+//       });
+//     }
+
+//     // Save the form data to the database
+//     const newRegistration = await Registration.create(
+//       {
+//         ...formData,
+//         prn: PRN,
+//       },
+//       { transaction }
+//     );
+
+//     // Create a payment record
+//     const successfulPaymentRecord = await paymentTDC.create(
+//       {
+//         registrationId: newRegistration.id,
+//         transactionId: PRN,
+//         amount: parseFloat(P_AMT),
+//         status: "success",
+//         paymentMethod: "fonepay",
+//         paymentDate: new Date(),
+//         email: newRegistration.email,
+//         fullName: newRegistration.fullName,
+//         sports: newRegistration.sports,
+//         time: newRegistration.time,
+//         category: newRegistration.category,
+//         days: newRegistration.days,
+//       },
+//       { transaction }
+//     );
+//     console.log("Payment record created:", successfulPaymentRecord);
+
+//     await transaction.commit();
+
+//     // Send payment confirmation email to the user
+//     await sendPaymentConfirmationEmail(
+//       newRegistration.email,
+//       newRegistration.fullName,
+//       parseFloat(P_AMT),
+//       newRegistration.sports,
+//       newRegistration.category,
+//       newRegistration.time,
+//       newRegistration.days,
+//       newRegistration.parentEmail
+//     );
+
+//     res.status(200).json({
+//       verified: true,
+//       message: "Payment verified successfully.",
+//       paymentDetails: {
+//         id: successfulPaymentRecord.id,
+//         status: "success",
+//         amount: parseFloat(P_AMT),
+//         paymentMethod: "fonepay",
+//         fullName: newRegistration.fullName,
+//         sports: newRegistration.sports,
+//         category: newRegistration.category,
+//         time: newRegistration.time,
+//         days: newRegistration.days,
+//       },
+//     });
+//   } catch (error) {
+//     // Rollback transaction in case of an error
+//     await transaction.rollback();
+//     console.error("Error during payment verification:", error);
+//     return res
+//       .status(500)
+//       .json({ verified: false, message: "Internal server error." });
+//   }
+// });
+
+
+
+
 router.post("/verify-payment", async (req, res) => {
-  const { PRN, PID, PS, RC, UID, BC, INI, P_AMT, R_AMT, DV, formData } =
-    req.body;
-
-  // Check if all required parameters are present
-  if (
-    !PRN ||
-    !PID ||
-    !PS ||
-    !RC ||
-    !UID ||
-    !BC ||
-    !INI ||
-    !P_AMT ||
-    !R_AMT ||
-    !DV ||
-    !formData
-  ) {
-    return res.status(400).json({
-      verified: false,
-      message: "Missing required parameters from backend",
-    });
-  }
-
-  if (RC !== "00") {
-    return res.status(400).json({
-      verified: false,
-      redirectUrl: "/register",
-      message: `Payment was not successful. Response code: ${RC}`,
-        paymentStatus: "cancelled"
-    });
-  }
-
-  // 3. Check if this PRN was already processed
-  const existingPayment = await paymentTDC.findOne({
-    where: { transactionId: PRN },
-  });
-  if (existingPayment) {
-    return res.status(400).json({
-      verified: false,
-      message: "This payment has already been processed",
-    });
-  }
-
-  const verificationString = `${PRN},${PID},${PS},${RC},${UID},${BC},${INI},${P_AMT},${R_AMT}`;
-
-  // Debugging logs
-  console.log("Received PRN from frontend:", PRN);
-  const transaction = await sequelize.transaction();
-
-  try {
-    // Generate HMAC-SHA512 hash for verification
-    const hmac = crypto.createHmac("sha512", process.env.SECRET_KEY);
-    hmac.update(verificationString.trim(), "utf-8");
-    const generatedHash = hmac.digest("hex").toUpperCase();
-
-    // Compare the generated hash with the received DV
-    if (generatedHash !== DV.toUpperCase()) {
-      await transaction.rollback();
+    const { PRN, PID, PS, RC, UID, BC, INI, P_AMT, R_AMT, DV, formData } =
+      req.body;
+  
+    // Check if all required parameters are present
+    if (
+      !PRN ||
+      !PID ||
+      !PS ||
+      !RC ||
+      !UID ||
+      !BC ||
+      !INI ||
+      !P_AMT ||
+      !R_AMT ||
+      !DV ||
+      !formData
+    ) {
       return res.status(400).json({
         verified: false,
-        message: "Invalid verification. Hashes do not match.",
+        message: "Missing required parameters from backend",
       });
     }
-
-    // Save the form data to the database
-    const newRegistration = await Registration.create(
-      {
-        ...formData,
-        prn: PRN,
-      },
-      { transaction }
-    );
-
-    // Create a payment record
-    const successfulPaymentRecord = await paymentTDC.create(
-      {
-        registrationId: newRegistration.id,
-        transactionId: PRN,
-        amount: parseFloat(P_AMT),
-        status: "success",
-        paymentMethod: "fonepay",
-        paymentDate: new Date(),
-        email: newRegistration.email,
-        fullName: newRegistration.fullName,
-        sports: newRegistration.sports,
-        time: newRegistration.time,
-        category: newRegistration.category,
-        days: newRegistration.days,
-      },
-      { transaction }
-    );
-    console.log("Payment record created:", successfulPaymentRecord);
-
-    await transaction.commit();
-
-    // Send payment confirmation email to the user
-    await sendPaymentConfirmationEmail(
-      newRegistration.email,
-      newRegistration.fullName,
-      parseFloat(P_AMT),
-      newRegistration.sports,
-      newRegistration.category,
-      newRegistration.time,
-      newRegistration.days,
-      newRegistration.parentEmail
-    );
-
-    res.status(200).json({
-      verified: true,
-      message: "Payment verified successfully.",
-      paymentDetails: {
-        id: successfulPaymentRecord.id,
-        status: "success",
-        amount: parseFloat(P_AMT),
-        paymentMethod: "fonepay",
-        fullName: newRegistration.fullName,
-        sports: newRegistration.sports,
-        category: newRegistration.category,
-        time: newRegistration.time,
-        days: newRegistration.days,
-      },
+  
+  // Check payment status first (from documentation)
+  if (PS === "false" || RC !== "successful") {
+    let message = "Payment failed";
+    switch(RC) {
+      case "01":
+        message = "Payment was cancelled by user";
+        break;
+      case "02":
+        message = "Payment timed out";
+        break;
+      case "03":
+        message = "Invalid payment credentials";
+        break;
+      case "04":
+        message = "Insufficient funds";
+        break;
+      default:
+        message = `Payment failed (Code: ${RC})`;
+    }
+    
+    return res.status(400).json({
+      verified: false,
+      message,
+      redirectUrl: "/register",
+      paymentStatus: "failed",
+      responseCode: RC
     });
-  } catch (error) {
-    // Rollback transaction in case of an error
-    await transaction.rollback();
-    console.error("Error during payment verification:", error);
-    return res
-      .status(500)
-      .json({ verified: false, message: "Internal server error." });
   }
-});
+  
+    // 3. Check if this PRN was already processed
+    const existingPayment = await paymentTDC.findOne({
+      where: { transactionId: PRN },
+    });
+    if (existingPayment) {
+      return res.status(400).json({
+        verified: false,
+        message: "This payment has already been processed",
+      });
+    }
+  
+    const verificationString = `${PRN},${PID},${PS},${RC},${UID},${BC},${INI},${P_AMT},${R_AMT}`;
+  
+    // Debugging logs
+    console.log("Received PRN from frontend:", PRN);
+    const transaction = await sequelize.transaction();
+  
+    try {
+      // Generate HMAC-SHA512 hash for verification
+      const hmac = crypto.createHmac("sha512", process.env.SECRET_KEY);
+      hmac.update(verificationString.trim(), "utf-8");
+      const generatedHash = hmac.digest("hex").toUpperCase();
+  
+      // Compare the generated hash with the received DV
+      if (generatedHash !== DV.toUpperCase()) {
+        await transaction.rollback();
+        return res.status(400).json({
+          verified: false,
+          message: "Invalid verification. Hashes do not match.",
+        });
+      }
+  
+      // Save the form data to the database
+      const newRegistration = await Registration.create(
+        {
+          ...formData,
+          prn: PRN,
+        },
+        { transaction }
+      );
+  
+      // Create a payment record
+      const successfulPaymentRecord = await paymentTDC.create(
+        {
+          registrationId: newRegistration.id,
+          transactionId: PRN,
+          amount: parseFloat(P_AMT),
+          status: "success",
+          paymentMethod: "fonepay",
+          paymentDate: new Date(),
+          email: newRegistration.email,
+          fullName: newRegistration.fullName,
+          sports: newRegistration.sports,
+          time: newRegistration.time,
+          category: newRegistration.category,
+          days: newRegistration.days,
+        },
+        { transaction }
+      );
+      console.log("Payment record created:", successfulPaymentRecord);
+  
+      await transaction.commit();
+  
+      // Send payment confirmation email to the user
+      await sendPaymentConfirmationEmail(
+        newRegistration.email,
+        newRegistration.fullName,
+        parseFloat(P_AMT),
+        newRegistration.sports,
+        newRegistration.category,
+        newRegistration.time,
+        newRegistration.days,
+        newRegistration.parentEmail
+      );
+  
+      res.status(200).json({
+        verified: true,
+        message: "Payment verified successfully.",
+        paymentDetails: {
+          id: successfulPaymentRecord.id,
+          status: "success",
+          amount: parseFloat(P_AMT),
+          paymentMethod: "fonepay",
+          fullName: newRegistration.fullName,
+          sports: newRegistration.sports,
+          category: newRegistration.category,
+          time: newRegistration.time,
+          days: newRegistration.days,
+        },
+      });
+    } catch (error) {
+      // Rollback transaction in case of an error
+      await transaction.rollback();
+      console.error("Error during payment verification:", error);
+      return res
+        .status(500)
+        .json({ verified: false, message: "Internal server error." });
+    }
+  });
 
 export default router;
