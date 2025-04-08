@@ -1,0 +1,76 @@
+version: "3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: PRODUCTION
+    container_name: api
+    env_file:
+      - ./server/.env
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - db
+    volumes:
+      - upload_data:/app/upload
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-default_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-default_database}
+      MYSQL_USER: ${MYSQL_USER:-default_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-default_password}
+    networks:
+      - my_network
+
+  react:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: REACT
+    container_name: react
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    networks:
+      - my_network
+
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-default_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-default_database}
+      MYSQL_USER: ${MYSQL_USER:-default_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-default_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - my_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-default_root_password}
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - db
+    networks:
+      - my_network
+
+volumes:
+  upload_data:
+  db_data:
+
+networks:
+  my_network:
+    driver: bridge
